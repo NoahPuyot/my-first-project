@@ -37,8 +37,8 @@ CREATE TABLE Decks_and_Cards(
     CardID INT,
     Quantity INT NOT NULL DEFAULT 1,
     PRIMARY KEY (DeckID, CardID),
-    FOREIGN KEY (DeckID) REFERENCES Decks(DeckID),
-    FOREIGN KEY (CardID) REFERENCES Cards(CardID)
+    FOREIGN KEY (DeckID) REFERENCES Decks(DeckID) ON DELETE CASCADE,
+    FOREIGN KEY (CardID) REFERENCES Cards(CardID) ON DELETE CASCADE
 );
 
 --Filling Tables (AI generated data cause i could care less to spend hours on writing goofy data)

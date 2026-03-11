@@ -30,29 +30,30 @@ app.get('/api/Decks', async (req, res)=>{
     }
 });
 
-//Gets all formats (For dropdown menu)
+//Gets all formats 
 app.get('/api/Formats', async (req, res) => {
     try{
-        const result = await pool.query('SELECT FormatID, FormatName FROM Formats');
+        const result = await pool.query('SELECT * FROM Formats');
         res.json(result.rows);
     } catch (err){
         res.status(500).json({ error: err.message});
     }
 });
 
-//Gets all users (For dropdown menu)
+//Gets all users 
 app.get('/api/Users', async (req, res) => {
     try{
-        const result = await pool.query('SELECT UserID, UserName FROM Users');
+        const result = await pool.query('SELECT * FROM Users');
         res.json(result.rows);
     } catch (err){
         res.status(500).json({ error: err.message});
     }
 });
 
+//Gets all cards
 app.get('/api/Cards', async (req, res) => {
     try{
-        const result = await pool.query('SELECT CardID, CardName FROM Cards');
+        const result = await pool.query('SELECT * FROM Cards');
         res.json(result.rows);
     } catch (err){
         res.status(500).json({ error: err.message});
@@ -98,16 +99,23 @@ app.delete('/api/Decks/:id', async (req, res) => {
 app.put('/api/Decks/:id/cards', async (req, res) => {
     try{
         const deckId = req.params.id;
-        const { CardName, CardText, CardType, ConvertedManaCost, Quantity } = req.body;
-
+        const { CardName, CardText, CardType, ConvertedManaCost} = req.body;
+        let { Quantity } = req.body;
         let tempresult = await pool.query('SELECT CardID FROM Cards WHERE LOWER(CardName) = LOWER($1)', [CardName]);
-
         if (tempresult.rows.length === 0) {
             tempresult = await pool.query('INSERT INTO Cards (CardName, CardText, CardType, ConvertedManaCost) VALUES ($1, $2, $3, $4) RETURNING *', [CardName, CardText, CardType, ConvertedManaCost]);
         }
+
         //Initialize cardId after incase adding new card into cards table
         const cardId = tempresult.rows[0].cardid;
-        const result = await pool.query('INSERT INTO Decks_and_Cards (DeckID, CardID, Quantity) VALUES ($1, $2, $3) RETURNING *', [deckId, cardId, Quantity]);
+
+        if (Quantity < 1){
+            Quantity = 1;
+        }
+        
+        //ON CONFLICT = Since we are using keys, if a key of that card already exists in the deck, it will run the DO UPDATE statement
+        //EXCLUDED = Uses the requested value over the database value, in this case the requested quantity value.
+        const result = await pool.query('INSERT INTO Decks_and_Cards (DeckID, CardID, Quantity) VALUES ($1, $2, $3) ON CONFLICT (DeckID, CardID) DO UPDATE SET Quantity = EXCLUDED.Quantity RETURNING *', [deckId, cardId, Quantity]);
         res.json(result.rows[0]);
     } catch(err){
         res.status(500).json({error: err.message});
@@ -158,6 +166,37 @@ app.delete('/api/Users/:id', async (req, res) => {
             res.status(404).json({error: 'User not found'});
         } else{
             res.json({message: 'User deleted successfully', user: result.rows[0]});
+        }
+    } catch(err){
+        res.status(500).json({error: err.message});
+    }
+});
+
+//CARD STUFF (just wanted to add incase invalid info needs to be deleted)
+//===================================================================================
+
+//Creates a new card
+app.post('/api/Cards', async (req, res)=>{
+    try{
+        const { CardName, CardText, CardType, ConvertedManaCost } = req.body;
+
+        const result = await pool.query('INSERT INTO Cards (CardName, CardText, CardType, ConvertedManaCost) VALUES ($1, $2, $3, $4) RETURNING *', [CardName, CardText, CardType, ConvertedManaCost]);
+        res.json(result.rows[0]);
+    } catch (err){
+        res.status(500).json({ error: err.message});
+    }
+});
+
+//Deletes a card
+app.delete('/api/Cards/:id', async (req, res) => {
+    try{
+        const cardId = req.params.id;
+
+        const result = await pool.query('DELETE FROM Cards WHERE CardID = $1 RETURNING *', [cardId]);
+        if (result.rows.length === 0){
+            res.status(404).json({error: 'Card not found'});
+        } else {
+            res.json({message: 'Card deleted successfully', card: result.rows[0]});
         }
     } catch(err){
         res.status(500).json({error: err.message});
