@@ -50,13 +50,14 @@ app.get('/api/Users', async (req, res) => {
     }
 });
 
-//app.get('/api/Decks/:id', async (req, res) =>{
-//    try{
-//        const deckId = req.params.id;
-//    } catch(err){
-//        res.status(500).json({ error: err.message});
-//    }
-//});
+app.get('/api/Cards', async (req, res) => {
+    try{
+        const result = await pool.query('SELECT CardID, CardName FROM Cards');
+        res.json(result.rows);
+    } catch (err){
+        res.status(500).json({ error: err.message});
+    }
+});
 
 
 //DECK STUFF
@@ -92,12 +93,21 @@ app.delete('/api/Decks/:id', async (req, res) => {
 });
 
 //Edits a deck
+//LOWER = Converts Varchar to lowercase to remove case sensitivity
+//LET = Variable that can be changed (unlike const)
 app.put('/api/Decks/:id/cards', async (req, res) => {
     try{
         const deckId = req.params.id;
-        const { CardId, Quantity } = req.body;
+        const { CardName, CardText, CardType, ConvertedManaCost, Quantity } = req.body;
 
-        const result = await pool.query('INSERT INTO Decks_and_Cards (deckid, cardid, quantity) VALUES ($1, $2, $3) RETURNING *', [deckId, CardId, Quantity])
+        let tempresult = await pool.query('SELECT CardID FROM Cards WHERE LOWER(CardName) = LOWER($1)', [CardName]);
+
+        if (tempresult.rows.length === 0) {
+            tempresult = await pool.query('INSERT INTO Cards (CardName, CardText, CardType, ConvertedManaCost) VALUES ($1, $2, $3, $4) RETURNING *', [CardName, CardText, CardType, ConvertedManaCost]);
+        }
+        //Initialize cardId after incase adding new card into cards table
+        const cardId = tempresult.rows[0].cardid;
+        const result = await pool.query('INSERT INTO Decks_and_Cards (DeckID, CardID, Quantity) VALUES ($1, $2, $3) RETURNING *', [deckId, cardId, Quantity]);
         res.json(result.rows[0]);
     } catch(err){
         res.status(500).json({error: err.message});
@@ -120,7 +130,7 @@ app.delete('/api/Decks/:id/cards/:cardId', async (req, res) => {
     } catch(err){
         res.status(500).json({error: err.message});
     }
-})
+});
 
 //USER STUFF
 //===================================================================================
