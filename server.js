@@ -22,7 +22,8 @@ const pool = new Pool({
 //Async = Allows for asynchronous operations/allows multiple operations to run.
 app.get('/api/Decks', async (req, res)=>{
     try{
-        const result = await pool.query('SELECT Decks.*, Cards.*, Formats.*, Users.*, Decks_and_Cards.* FROM Decks JOIN Formats ON Decks.FormatID = Formats.FormatID JOIN Users ON Decks.UserID = Users.UserID JOIN Decks_and_Cards ON Decks.DeckID = Decks_and_Cards.DeckID JOIN Cards ON Decks_and_Cards.CardID = Cards.CardID')
+        //LEFT JOIN returns all records from left table (decks) and fills null for those that havev no match in the right table (cards).
+        const result = await pool.query('SELECT Decks.*, Cards.*, Formats.*, Users.*, Decks_and_Cards.* FROM Decks JOIN Formats ON Decks.FormatID = Formats.FormatID JOIN Users ON Decks.UserID = Users.UserID LEFT JOIN Decks_and_Cards ON Decks.DeckID = Decks_and_Cards.DeckID LEFT JOIN Cards ON Decks_and_Cards.CardID = Cards.CardID')
         res.json(result.rows);
     } catch (err){
         res.status(500).json({ error: err.message});
@@ -89,6 +90,37 @@ app.delete('/api/Decks/:id', async (req, res) => {
         res.status(500).json({error: err.message});
     }
 });
+
+//Edits a deck
+app.put('/api/Decks/:id/cards', async (req, res) => {
+    try{
+        const deckId = req.params.id;
+        const { CardId, Quantity } = req.body;
+
+        const result = await pool.query('INSERT INTO Decks_and_Cards (deckid, cardid, quantity) VALUES ($1, $2, $3) RETURNING *', [deckId, CardId, Quantity])
+        res.json(result.rows[0]);
+    } catch(err){
+        res.status(500).json({error: err.message});
+    }
+});
+
+//Deletes a card from a deck
+app.delete('/api/Decks/:id/cards/:cardId', async (req, res) => {
+    try{
+        const deckId = req.params.id;
+        const cardId = req.params.cardId;
+
+        const result = await pool.query('DELETE FROM Decks_and_Cards WHERE DeckID = $1 AND CardID = $2 RETURNING *', [deckId, cardId]);
+
+        if (result.rows.length === 0) {
+            res.status(404).json({error: 'Card not found'});
+        } else{
+            res.json({message: 'Card deleted successfully from deck', card: result.rows[0]});
+        }
+    } catch(err){
+        res.status(500).json({error: err.message});
+    }
+})
 
 //USER STUFF
 //===================================================================================
