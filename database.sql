@@ -75,7 +75,7 @@ INSERT INTO Decks (DeckID, DeckName, CreationDate, FormatID, UserID) VALUES
 (4, 'Lotus Commander', '2024-04-10', 2, 1);
 
 -- deck_and_cards (depends on Decks and Cards)
-INSERT INTO deck_and_cards (DeckID, CardID, Quantity) VALUES
+INSERT INTO decks_and_cards (DeckID, CardID, Quantity) VALUES
 -- Red Burn (lots of burn spells)
 (1, 1, 4),  -- 4x Lightning Bolt
 (1, 7, 4),  -- 4x Shock
