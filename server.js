@@ -23,7 +23,7 @@ const pool = new Pool({
 app.get('/api/Decks', async (req, res)=>{
     try{
         //LEFT JOIN returns all records from left table (decks) and fills null for those that havev no match in the right table (cards).
-        const result = await pool.query('SELECT Decks.*, Cards.*, Formats.*, Users.*, Decks_and_Cards.* FROM Decks JOIN Formats ON Decks.FormatID = Formats.FormatID JOIN Users ON Decks.UserID = Users.UserID LEFT JOIN Decks_and_Cards ON Decks.DeckID = Decks_and_Cards.DeckID LEFT JOIN Cards ON Decks_and_Cards.CardID = Cards.CardID')
+        const result = await pool.query('SELECT Decks.*, Cards.*, Formats.*, Users.*, Decks_and_Cards.* FROM Decks LEFT JOIN Formats ON Decks.FormatID = Formats.FormatID LEFT JOIN Users ON Decks.UserID = Users.UserID LEFT JOIN Decks_and_Cards ON Decks.DeckID = Decks_and_Cards.DeckID LEFT JOIN Cards ON Decks_and_Cards.CardID = Cards.CardID')
         res.json(result.rows);
     } catch (err){
         res.status(500).json({ error: err.message});
@@ -197,6 +197,38 @@ app.delete('/api/Cards/:id', async (req, res) => {
             res.status(404).json({error: 'Card not found'});
         } else {
             res.json({message: 'Card deleted successfully', card: result.rows[0]});
+        }
+    } catch(err){
+        res.status(500).json({error: err.message});
+    }
+});
+
+//FORMAT STUFF (just wanted to add for new formats being created or for fun formats)
+//===================================================================================
+
+//Creates a new format
+app.post('/api/Formats', async (req, res)=>{
+    try{
+        const {FormatName, FormatDescription, DeckSize, MaxCopies } = req.body;
+        if (DeckSize < 1 || MaxCopies < 1 || !Number.isInteger(DeckSize) || !Number.isInteger(MaxCopies)){
+            return res.status(400).json({error: 'Invalid Value for DeckSize or MaxCopies. Both must be positive integers.'});
+        }    
+        const result = await pool.query('INSERT INTO Formats (FormatName, FormatDescription, DeckSize, MaxCopies) VALUES ($1, $2, $3, $4) RETURNING *', [FormatName, FormatDescription, DeckSize, MaxCopies]);
+        res.json(result.rows[0]);
+    } catch (err){
+        res.status(500).json({ error: err.message});
+    }
+});
+
+//Deletes a format
+app.delete('/api/Formats/:id', async (req, res) => {
+    try{
+        const formatId = req.params.id;
+        const result = await pool.query('DELETE FROM Formats WHERE FormatID = $1 RETURNING *', [formatId]);
+        if (result.rows.length === 0){
+            res.status(404).json({error: 'Format not found'});
+        } else {
+            res.json({message: 'Format deleted successfully', format: result.rows[0]});
         }
     } catch(err){
         res.status(500).json({error: err.message});
