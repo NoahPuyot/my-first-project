@@ -1,0 +1,1123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MTG Deck Manager</title>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Crimson+Pro:ital,wght@0,300;0,400;0,600;1,300&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:       #0a0a0f;
+      --surface:  #12121a;
+      --border:   #2a2a3d;
+      --gold:     #c9a84c;
+      --gold-dim: #7a5f28;
+      --red:      #c0392b;
+      --red-dim:  rgba(192,57,43,0.15);
+      --text:     #e8e0d0;
+      --muted:    #7a7080;
+      --card-bg:  #16161f;
+    }
+ 
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+ 
+    body {
+      background: var(--bg); color: var(--text);
+      font-family: 'Crimson Pro', Georgia, serif; font-size: 17px; min-height: 100vh;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -10%, rgba(201,168,76,0.07), transparent),
+        repeating-linear-gradient(0deg,  transparent, transparent 60px, rgba(201,168,76,0.018) 60px, rgba(201,168,76,0.018) 61px),
+        repeating-linear-gradient(90deg, transparent, transparent 60px, rgba(201,168,76,0.018) 60px, rgba(201,168,76,0.018) 61px);
+    }
+ 
+    header {
+      text-align: center; padding: 3rem 1rem 2rem;
+      border-bottom: 1px solid var(--border); position: relative;
+    }
+    header::after {
+      content: ''; display: block; width: 140px; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+      margin: 1.2rem auto 0;
+    }
+    header h1 {
+      font-family: 'Cinzel Decorative', serif; font-size: clamp(1.3rem, 4vw, 2.2rem);
+      color: var(--gold); letter-spacing: 0.04em; text-shadow: 0 0 40px rgba(201,168,76,0.25);
+    }
+    header p { color: var(--muted); font-style: italic; margin-top: 0.4rem; font-size: 0.95rem; }
+ 
+    nav {
+      display: flex; justify-content: center;
+      border-bottom: 1px solid var(--border); background: var(--surface);
+    }
+    .tab-btn {
+      background: transparent; border: none; border-bottom: 2px solid transparent;
+      color: var(--muted); font-family: 'Cinzel Decorative', serif;
+      font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase;
+      padding: 1rem 1.8rem; cursor: pointer;
+      transition: color 0.2s, border-color 0.2s; margin-bottom: -1px;
+    }
+    .tab-btn:hover { color: var(--text); }
+    .tab-btn.active { color: var(--gold); border-bottom-color: var(--gold); }
+ 
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+ 
+    main { max-width: 1100px; margin: 0 auto; padding: 2.5rem 1.5rem 5rem; }
+ 
+    .section-title {
+      font-family: 'Cinzel Decorative', serif; font-size: 0.85rem; color: var(--gold);
+      letter-spacing: 0.14em; text-transform: uppercase; margin-bottom: 1.2rem;
+      display: flex; align-items: center; gap: 0.8rem;
+    }
+    .section-title::after {
+      content: ''; flex: 1; height: 1px;
+      background: linear-gradient(90deg, var(--gold-dim), transparent);
+    }
+ 
+    .form-card {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+      padding: 1.8rem 2rem; margin-bottom: 3rem; position: relative; overflow: hidden;
+    }
+    .form-card::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--gold), transparent);
+    }
+ 
+    .form-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 1rem; margin-bottom: 1.2rem;
+    }
+ 
+    label {
+      display: block; font-size: 0.75rem; letter-spacing: 0.1em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 0.4rem;
+    }
+ 
+    input, select {
+      width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 3px;
+      color: var(--text); font-family: 'Crimson Pro', serif; font-size: 1rem;
+      padding: 0.55rem 0.8rem; transition: border-color 0.2s; outline: none;
+      appearance: none; -webkit-appearance: none;
+    }
+    input:focus, select:focus { border-color: var(--gold-dim); }
+ 
+    .select-wrap { position: relative; }
+    .select-wrap::after {
+      content: ''; position: absolute; right: 0.85rem; top: 50%;
+      transform: translateY(-50%) rotate(45deg); width: 7px; height: 7px;
+      border-right: 2px solid var(--gold-dim); border-bottom: 2px solid var(--gold-dim);
+      pointer-events: none; margin-top: -2px;
+    }
+    select option { background: #1a1a26; color: var(--text); }
+ 
+    /* ── Buttons ── */
+    .btn {
+      background: transparent; border: 1px solid var(--gold-dim); color: var(--gold);
+      font-family: 'Cinzel Decorative', serif; font-size: 0.72rem; letter-spacing: 0.1em;
+      padding: 0.65rem 1.8rem; border-radius: 3px; cursor: pointer;
+      transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+    }
+    .btn:hover {
+      background: rgba(201,168,76,0.1); border-color: var(--gold);
+      box-shadow: 0 0 18px rgba(201,168,76,0.15);
+    }
+    .btn-delete {
+      background: transparent; border: 1px solid rgba(192,57,43,0.35); color: #d9534f;
+      font-family: 'Crimson Pro', serif; font-size: 0.8rem;
+      padding: 0.3rem 0.9rem; border-radius: 3px; cursor: pointer;
+      transition: background 0.2s, border-color 0.2s; flex-shrink: 0;
+    }
+    .btn-delete:hover { background: var(--red-dim); border-color: var(--red); }
+    .btn-delete-card {
+      background: transparent; border: none; color: rgba(192,57,43,0.45);
+      font-size: 1rem; cursor: pointer; padding: 0 0.3rem; line-height: 1;
+      transition: color 0.2s; flex-shrink: 0;
+    }
+    .btn-delete-card:hover { color: #d9534f; }
+    .btn-add-card {
+      background: transparent; border: 1px solid rgba(201,168,76,0.3); color: var(--gold);
+      font-family: 'Crimson Pro', serif; font-size: 0.8rem;
+      padding: 0.3rem 0.9rem; border-radius: 3px; cursor: pointer;
+      transition: background 0.2s, border-color 0.2s; flex-shrink: 0;
+    }
+    .btn-add-card:hover { background: rgba(201,168,76,0.08); border-color: var(--gold); }
+ 
+    /* ── Status ── */
+    .status-msg {
+      min-height: 1.4rem; font-style: italic; font-size: 0.9rem; color: var(--gold);
+      margin-top: 0.8rem; opacity: 0; transition: opacity 0.3s;
+    }
+    .status-msg.show  { opacity: 1; }
+    .status-msg.error { color: #d9534f; }
+ 
+    /* ── Lists ── */
+    #deck-list    { display: grid; gap: 1.2rem; }
+    #user-list    { display: grid; gap: 0.8rem; }
+    #card-list    { display: grid; gap: 0.8rem; }
+    #format-list  { display: grid; gap: 0.8rem; }
+ 
+    /* ── Animations ── */
+    @keyframes fadeUp  { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeOut { from { opacity:1; transform:scaleY(1); }        to { opacity:0; transform:scaleY(0.85); } }
+    @keyframes fadeRow { from { opacity:1; } to { opacity:0; transform:translateX(10px); } }
+ 
+    /* ── Deck card ── */
+    .deck-card {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 4px; overflow: hidden; animation: fadeUp 0.35s ease both;
+    }
+    .deck-card.removing { animation: fadeOut 0.3s ease forwards; }
+ 
+    /* ── User row ── */
+    .user-row {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 4px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.9rem 1.4rem; gap: 1rem; animation: fadeUp 0.3s ease both;
+    }
+    .user-row.removing { animation: fadeOut 0.25s ease forwards; }
+    .user-info { display: flex; flex-direction: column; gap: 0.25rem; }
+    .user-name  { font-family: 'Cinzel Decorative', serif; font-size: 0.85rem; color: var(--gold); }
+    .user-email { font-size: 0.85rem; color: var(--text); }
+    .user-id    { font-size: 0.72rem; color: var(--border); letter-spacing: 0.08em; text-transform: uppercase; }
+ 
+    /* ── Format row ── */
+    .format-row {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 4px;
+      overflow: hidden; animation: fadeUp 0.3s ease both;
+    }
+    .format-row.removing { animation: fadeOut 0.25s ease forwards; }
+ 
+    .format-row-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.85rem 1.4rem; gap: 1rem; cursor: pointer;
+      transition: background 0.2s;
+    }
+    .format-row-header:hover { background: rgba(201,168,76,0.03); }
+ 
+    .format-row-left { flex: 1; min-width: 0; }
+    .format-row-name { font-family: 'Cinzel Decorative', serif; font-size: 0.85rem; color: var(--gold); }
+    .format-row-meta {
+      display: flex; gap: 1.2rem; flex-wrap: wrap;
+      font-size: 0.82rem; color: var(--muted); margin-top: 0.3rem; align-items: center;
+    }
+    .stat-pill {
+      display: flex; align-items: center; gap: 0.35rem;
+    }
+    .stat-pill-label {
+      font-size: 0.68rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted);
+    }
+    .stat-pill-value {
+      background: rgba(201,168,76,0.08); border: 1px solid var(--gold-dim);
+      border-radius: 2px; color: var(--gold);
+      font-size: 0.8rem; padding: 0.1rem 0.55rem; font-weight: 600;
+    }
+ 
+    .format-row-right { display: flex; align-items: center; gap: 0.8rem; flex-shrink: 0; }
+ 
+    .format-row-body {
+      display: none; padding: 0.75rem 1.4rem 1rem;
+      border-top: 1px solid var(--border);
+      background: rgba(201,168,76,0.02);
+    }
+    .format-row-body.open { display: block; }
+    .format-desc-label {
+      font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase;
+      color: var(--gold-dim); margin-bottom: 0.3rem;
+    }
+    .format-desc-text { font-size: 0.88rem; color: var(--muted); font-style: italic; }
+ 
+    /* ── Card library row ── */
+    .card-row {
+      background: var(--card-bg); border: 1px solid var(--border); border-radius: 4px;
+      overflow: hidden; animation: fadeUp 0.3s ease both;
+    }
+    .card-row.removing { animation: fadeOut 0.25s ease forwards; }
+    .card-row-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.85rem 1.4rem; gap: 1rem; cursor: pointer; transition: background 0.2s;
+    }
+    .card-row-header:hover { background: rgba(201,168,76,0.03); }
+    .card-row-header-left { flex: 1; min-width: 0; }
+    .card-row-name { font-family: 'Cinzel Decorative', serif; font-size: 0.82rem; color: var(--gold); }
+    .card-row-meta {
+      display: flex; gap: 1rem; flex-wrap: wrap;
+      font-size: 0.82rem; color: var(--muted); margin-top: 0.3rem; align-items: center;
+    }
+    .mana-badge {
+      background: rgba(201,168,76,0.08); border: 1px solid var(--gold-dim);
+      border-radius: 2px; color: var(--gold);
+      font-size: 0.72rem; padding: 0.1rem 0.5rem; letter-spacing: 0.05em;
+    }
+    .card-row-header-right { display: flex; align-items: center; gap: 0.8rem; flex-shrink: 0; }
+    .card-row-body {
+      display: none; padding: 0.7rem 1.4rem 1rem;
+      border-top: 1px solid var(--border);
+      font-size: 0.88rem; color: var(--muted); font-style: italic;
+      background: rgba(201,168,76,0.02);
+    }
+    .card-row-body.open { display: block; }
+    .card-text-label {
+      font-style: normal; font-size: 0.72rem; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--gold-dim); margin-bottom: 0.3rem;
+    }
+ 
+    /* ── Chevrons ── */
+    .chevron {
+      width: 14px; height: 14px;
+      border-right: 2px solid var(--gold-dim); border-bottom: 2px solid var(--gold-dim);
+      transform: rotate(45deg); transition: transform 0.25s; cursor: pointer; margin-top: -2px;
+    }
+    .chevron.open { transform: rotate(-135deg); margin-top: 2px; }
+    .chevron-sm {
+      width: 10px; height: 10px;
+      border-right: 2px solid var(--gold-dim); border-bottom: 2px solid var(--gold-dim);
+      transform: rotate(45deg); transition: transform 0.22s; margin-top: -2px;
+    }
+    .chevron-sm.open { transform: rotate(-135deg); margin-top: 2px; }
+ 
+    /* ── Deck header ── */
+    .deck-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 1rem 1.4rem; border-bottom: 1px solid transparent;
+      transition: background 0.2s, border-color 0.2s; gap: 1rem;
+    }
+    .deck-header:hover { background: rgba(201,168,76,0.03); }
+    .deck-header.open  { border-bottom-color: var(--border); }
+    .deck-header-left  { cursor: pointer; flex: 1; min-width: 0; }
+    .deck-name {
+      font-family: 'Cinzel Decorative', serif; font-size: 0.9rem; color: var(--gold);
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .deck-meta {
+      display: flex; gap: 1rem; flex-wrap: wrap;
+      font-size: 0.84rem; color: var(--muted); margin-top: 0.35rem;
+    }
+    .tag {
+      background: rgba(201,168,76,0.08); border: 1px solid var(--gold-dim); border-radius: 2px;
+      color: var(--gold); font-size: 0.7rem; letter-spacing: 0.08em;
+      padding: 0.12rem 0.45rem; text-transform: uppercase;
+    }
+    .deck-header-right { display: flex; align-items: center; gap: 0.8rem; flex-shrink: 0; }
+ 
+    .deck-body { display: none; padding: 1rem 1.4rem 1.4rem; }
+    .deck-body.open { display: block; }
+ 
+    /* ── Add card form ── */
+    .add-card-form {
+      display: none; flex-direction: column; gap: 0.8rem;
+      background: rgba(201,168,76,0.04); border: 1px solid var(--gold-dim);
+      border-radius: 3px; padding: 1.2rem; margin-bottom: 1rem;
+    }
+    .add-card-form.open { display: flex; }
+    .add-card-form-title {
+      font-family: 'Cinzel Decorative', serif; font-size: 0.75rem;
+      color: var(--gold); letter-spacing: 0.1em; margin-bottom: 0.2rem;
+    }
+    .add-card-grid {
+      display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 0.7rem; align-items: end;
+    }
+    @media (max-width: 680px) { .add-card-grid { grid-template-columns: 1fr 1fr; } }
+    .add-card-form label { font-size: 0.7rem; }
+    .add-card-form input { font-size: 0.9rem; padding: 0.42rem 0.7rem; }
+ 
+    .new-card-fields {
+      display: none; grid-column: 1 / -1;
+      background: rgba(201,168,76,0.03); border: 1px dashed var(--gold-dim);
+      border-radius: 3px; padding: 0.9rem 1rem; gap: 0.7rem;
+    }
+    .new-card-fields.show { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); }
+    .new-card-fields-label {
+      grid-column: 1 / -1; font-size: 0.75rem; color: var(--gold);
+      font-style: italic; margin-bottom: -0.2rem;
+    }
+    .add-card-form-status {
+      font-style: italic; font-size: 0.82rem; color: var(--gold);
+      min-height: 1.1rem; opacity: 0; transition: opacity 0.3s;
+    }
+    .add-card-form-status.show  { opacity: 1; }
+    .add-card-form-status.error { color: #d9534f; }
+    .add-card-form-status.info  { color: var(--muted); }
+ 
+    /* ── Card table inside deck ── */
+    .card-table { width: 100%; border-collapse: collapse; font-size: 0.9rem; margin-top: 0.5rem; }
+    .card-table th {
+      text-align: left; font-weight: 600; font-size: 0.73rem;
+      letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted);
+      padding: 0.4rem 0.6rem; border-bottom: 1px solid var(--border);
+    }
+    .card-table td { padding: 0.45rem 0.6rem; border-bottom: 1px solid rgba(42,42,61,0.5); vertical-align: middle; }
+    .card-table tr:last-child td { border-bottom: none; }
+    .card-table tr:hover td { background: rgba(201,168,76,0.025); }
+    .card-table tr.removing td { animation: fadeRow 0.25s ease forwards; }
+    .qty-badge {
+      display: inline-block; background: rgba(201,168,76,0.12); color: var(--gold);
+      border-radius: 2px; padding: 0.1rem 0.45rem; font-size: 0.82rem;
+      font-weight: 600; min-width: 1.8rem; text-align: center;
+    }
+ 
+    /* ── Confirm overlay ── */
+    .overlay {
+      display: none; position: fixed; inset: 0; z-index: 100;
+      background: rgba(0,0,0,0.72); backdrop-filter: blur(3px);
+      align-items: center; justify-content: center;
+    }
+    .overlay.show { display: flex; }
+    .confirm-box {
+      background: var(--surface); border: 1px solid var(--border); border-radius: 4px;
+      padding: 2rem 2.4rem; max-width: 360px; width: 90%; text-align: center;
+      position: relative; overflow: hidden; animation: popIn 0.2s ease;
+    }
+    @keyframes popIn { from { opacity:0; transform:scale(0.93); } to { opacity:1; transform:scale(1); } }
+    .confirm-box::before {
+      content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, var(--red), transparent);
+    }
+    .confirm-box h3 { font-family: 'Cinzel Decorative', serif; color: #d9534f; font-size: 1rem; margin-bottom: 0.7rem; }
+    .confirm-box p  { color: var(--muted); font-size: 0.95rem; line-height: 1.5; margin-bottom: 1.5rem; }
+    .confirm-box p strong { color: var(--text); }
+    .confirm-actions { display: flex; gap: 0.8rem; justify-content: center; }
+    .btn-confirm-delete {
+      background: var(--red-dim); border: 1px solid var(--red); color: #d9534f;
+      font-family: 'Crimson Pro', serif; font-size: 0.9rem;
+      padding: 0.55rem 1.4rem; border-radius: 3px; cursor: pointer; transition: background 0.2s;
+    }
+    .btn-confirm-delete:hover { background: rgba(192,57,43,0.28); }
+    .btn-cancel {
+      background: transparent; border: 1px solid var(--border); color: var(--muted);
+      font-family: 'Crimson Pro', serif; font-size: 0.9rem;
+      padding: 0.55rem 1.4rem; border-radius: 3px; cursor: pointer; transition: border-color 0.2s, color 0.2s;
+    }
+    .btn-cancel:hover { border-color: var(--muted); color: var(--text); }
+ 
+    .loading { text-align: center; padding: 3rem; color: var(--muted); font-style: italic; }
+    .empty {
+      text-align: center; padding: 3rem; color: var(--muted);
+      font-style: italic; border: 1px dashed var(--border); border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+ 
+<div class="overlay" id="confirmOverlay">
+  <div class="confirm-box">
+    <h3>Confirm Delete</h3>
+    <p>Are you sure you want to delete <strong id="confirmName"></strong>?<br>This cannot be undone.</p>
+    <div class="confirm-actions">
+      <button class="btn-cancel"         onclick="closeConfirm()">Cancel</button>
+      <button class="btn-confirm-delete" onclick="confirmDelete()">Delete</button>
+    </div>
+  </div>
+</div>
+ 
+<header>
+  <h1>MTG Deck Manager</h1>
+  <p>Forge your collection. Command the field.</p>
+</header>
+ 
+<nav>
+  <button class="tab-btn active" onclick="switchTab('decks',   this)">Decks</button>
+  <button class="tab-btn"        onclick="switchTab('cards',   this)">Cards</button>
+  <button class="tab-btn"        onclick="switchTab('formats', this)">Formats</button>
+  <button class="tab-btn"        onclick="switchTab('users',   this)">Users</button>
+</nav>
+ 
+<main>
+ 
+  <!-- ══════ DECKS TAB ══════ -->
+  <div class="tab-panel active" id="tab-decks">
+    <div class="section-title">New Deck</div>
+    <div class="form-card">
+      <div class="form-grid">
+        <div>
+          <label for="deckName">Deck Name</label>
+          <input type="text" id="deckName" placeholder="e.g. Burn Deck"/>
+        </div>
+        <div>
+          <label for="formatSelect">Format</label>
+          <div class="select-wrap">
+            <select id="formatSelect"><option value="">Loading formats…</option></select>
+          </div>
+        </div>
+        <div>
+          <label for="userSelect">Owner</label>
+          <div class="select-wrap">
+            <select id="userSelect"><option value="">Loading users…</option></select>
+          </div>
+        </div>
+      </div>
+      <button class="btn" onclick="createDeck()">Create Deck</button>
+      <div class="status-msg" id="deck-status"></div>
+    </div>
+    <div class="section-title">All Decks</div>
+    <div id="deck-list"><div class="loading">Loading decks…</div></div>
+  </div>
+ 
+  <!-- ══════ CARDS TAB ══════ -->
+  <div class="tab-panel" id="tab-cards">
+    <div class="section-title">New Card</div>
+    <div class="form-card">
+      <div class="form-grid">
+        <div>
+          <label for="newCardName">Card Name</label>
+          <input type="text" id="newCardName" placeholder="e.g. Lightning Bolt"/>
+        </div>
+        <div>
+          <label for="newCardType">Card Type</label>
+          <input type="text" id="newCardType" placeholder="e.g. Instant"/>
+        </div>
+        <div>
+          <label for="newCardMana">Mana Cost</label>
+          <input type="text" id="newCardMana" placeholder="e.g. 1R"/>
+        </div>
+        <div>
+          <label for="newCardText">Card Text</label>
+          <input type="text" id="newCardText" placeholder="e.g. Deal 3 damage to any target"/>
+        </div>
+      </div>
+      <button class="btn" onclick="createCard()">Add Card</button>
+      <div class="status-msg" id="card-status"></div>
+    </div>
+    <div class="section-title">Card Library</div>
+    <div id="card-list"><div class="loading">Loading cards…</div></div>
+  </div>
+ 
+  <!-- ══════ FORMATS TAB ══════ -->
+  <div class="tab-panel" id="tab-formats">
+    <div class="section-title">New Format</div>
+    <div class="form-card">
+      <div class="form-grid">
+        <div>
+          <label for="newFormatName">Format Name</label>
+          <input type="text" id="newFormatName" placeholder="e.g. Standard"/>
+        </div>
+        <div>
+          <label for="newFormatDesc">Description</label>
+          <input type="text" id="newFormatDesc" placeholder="e.g. 60 card competitive format"/>
+        </div>
+        <div>
+          <label for="newDeckSize">Deck Size</label>
+          <input type="number" id="newDeckSize" placeholder="e.g. 60" min="1"/>
+        </div>
+        <div>
+          <label for="newMaxCopies">Max Copies</label>
+          <input type="number" id="newMaxCopies" placeholder="e.g. 4" min="1"/>
+        </div>
+      </div>
+      <button class="btn" onclick="createFormat()">Add Format</button>
+      <div class="status-msg" id="format-status"></div>
+    </div>
+    <div class="section-title">All Formats</div>
+    <div id="format-list"><div class="loading">Loading formats…</div></div>
+  </div>
+ 
+  <!-- ══════ USERS TAB ══════ -->
+  <div class="tab-panel" id="tab-users">
+    <div class="section-title">New User</div>
+    <div class="form-card">
+      <div class="form-grid">
+        <div>
+          <label for="newUsername">Username</label>
+          <input type="text"  id="newUsername" placeholder="e.g. PlayerOne"/>
+        </div>
+        <div>
+          <label for="newEmail">Email</label>
+          <input type="email" id="newEmail" placeholder="e.g. player@email.com"/>
+        </div>
+      </div>
+      <button class="btn" onclick="createUser()">Add User</button>
+      <div class="status-msg" id="user-status"></div>
+    </div>
+    <div class="section-title">All Users</div>
+    <div id="user-list"><div class="loading">Loading users…</div></div>
+  </div>
+ 
+</main>
+ 
+<script>
+  const API = 'http://localhost:3000/api';
+  let pendingDelete = { type: null, id: null, name: null, extra: null };
+ 
+  // ── Tab switching ────────────────────────────────────────────────────
+  function switchTab(tab, btn) {
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(`tab-${tab}`).classList.add('active');
+    btn.classList.add('active');
+  }
+ 
+  // ── Dropdowns ────────────────────────────────────────────────────────
+  async function loadDropdowns() {
+    try {
+      const [fRes, uRes] = await Promise.all([fetch(`${API}/Formats`), fetch(`${API}/Users`)]);
+      const formats = await fRes.json();
+      const users   = await uRes.json();
+ 
+      document.getElementById('formatSelect').innerHTML =
+        '<option value="">— Select Format —</option>' +
+        formats.map(f => `<option value="${f.formatid||f.FormatID}">${f.formatname||f.FormatName}</option>`).join('');
+ 
+      document.getElementById('userSelect').innerHTML =
+        '<option value="">— Select Owner —</option>' +
+        users.map(u => `<option value="${u.userid||u.UserID}">${u.username||u.Username}</option>`).join('');
+ 
+    } catch {
+      document.getElementById('formatSelect').innerHTML = '<option value="">Could not load</option>';
+      document.getElementById('userSelect').innerHTML   = '<option value="">Could not load</option>';
+    }
+  }
+ 
+  // ── Load decks ───────────────────────────────────────────────────────
+  async function loadDecks() {
+    const container = document.getElementById('deck-list');
+    try {
+      const res  = await fetch(`${API}/Decks`);
+      const rows = await res.json();
+ 
+      if (!rows.length) {
+        container.innerHTML = '<div class="empty">No decks found. Create one above!</div>';
+        return;
+      }
+ 
+      const map = {};
+      rows.forEach(row => {
+        const id = row.deckid ?? row.DeckID;
+        if (!map[id]) {
+          map[id] = {
+            DeckID:       id,
+            DeckName:     row.deckname     ?? row.DeckName,
+            CreationDate: row.creationdate ?? row.CreationDate,
+            FormatName:   row.formatname   ?? row.FormatName,
+            Username:     row.username     ?? row.Username,
+            cards: []
+          };
+        }
+        const cardName = row.cardname ?? row.CardName;
+        if (cardName) {
+          map[id].cards.push({
+            CardID:            row.cardid            ?? row.CardID,
+            CardName:          cardName,
+            CardType:          row.cardtype          ?? row.CardType,
+            ConvertedManaCost: row.convertedmanacost ?? row.ConvertedManaCost,
+            Quantity:          row.quantity          ?? row.Quantity
+          });
+        }
+      });
+ 
+      container.innerHTML = Object.values(map).map((deck, i) => renderDeck(deck, i)).join('');
+    } catch {
+      container.innerHTML = `<div class="empty" style="color:#d9534f">Could not connect to backend.<br><small>Make sure your server is running on port 3000.</small></div>`;
+    }
+  }
+ 
+  // ── Load cards ───────────────────────────────────────────────────────
+  async function loadCards() {
+    const container = document.getElementById('card-list');
+    try {
+      const res   = await fetch(`${API}/Cards`);
+      const cards = await res.json();
+      if (!cards.length) {
+        container.innerHTML = '<div class="empty">No cards found. Add one above!</div>';
+        return;
+      }
+      container.innerHTML = cards.map((c, i) => renderCardRow(c, i)).join('');
+    } catch {
+      container.innerHTML = `<div class="empty" style="color:#d9534f">Could not load cards.</div>`;
+    }
+  }
+ 
+  // ── Load formats ─────────────────────────────────────────────────────
+  async function loadFormats() {
+    const container = document.getElementById('format-list');
+    try {
+      const res     = await fetch(`${API}/Formats`);
+      const formats = await res.json();
+      if (!formats.length) {
+        container.innerHTML = '<div class="empty">No formats found. Add one above!</div>';
+        return;
+      }
+      container.innerHTML = formats.map((f, i) => renderFormatRow(f, i)).join('');
+    } catch {
+      container.innerHTML = `<div class="empty" style="color:#d9534f">Could not load formats.</div>`;
+    }
+  }
+ 
+  // ── Load users ───────────────────────────────────────────────────────
+  async function loadUsers() {
+    const container = document.getElementById('user-list');
+    try {
+      const res   = await fetch(`${API}/Users`);
+      const users = await res.json();
+      if (!users.length) {
+        container.innerHTML = '<div class="empty">No users found. Add one above!</div>';
+        return;
+      }
+      container.innerHTML = users.map((u, i) => renderUser(u, i)).join('');
+    } catch {
+      container.innerHTML = `<div class="empty" style="color:#d9534f">Could not load users.</div>`;
+    }
+  }
+ 
+  // ── Render deck ──────────────────────────────────────────────────────
+  function renderDeck(deck, idx) {
+    const date = deck.CreationDate
+      ? new Date(deck.CreationDate).toLocaleDateString('en-US', { year:'numeric', month:'short', day:'numeric' })
+      : '—';
+ 
+    const cardRows = deck.cards.length
+      ? deck.cards.map(c => `
+          <tr id="cardrow-${deck.DeckID}-${c.CardID}">
+            <td>${c.CardName}</td>
+            <td>${c.CardType ?? '—'}</td>
+            <td>${c.ConvertedManaCost ?? '—'}</td>
+            <td><span class="qty-badge">×${c.Quantity ?? 1}</span></td>
+            <td style="text-align:right;width:2rem">
+              <button class="btn-delete-card" title="Remove from deck"
+                onclick="askDelete('card',${c.CardID},'${c.CardName.replace(/'/g,"\\'")}',${deck.DeckID})">✕</button>
+            </td>
+          </tr>`).join('')
+      : `<tr id="cardrow-empty-${deck.DeckID}"><td colspan="5" style="color:var(--muted);font-style:italic;text-align:center;padding:0.8rem">No cards yet</td></tr>`;
+ 
+    const safeName = (deck.DeckName ?? 'Unnamed Deck').replace(/'/g, "\\'");
+ 
+    return `
+      <div class="deck-card" id="deck-${deck.DeckID}" style="animation-delay:${idx*0.05}s">
+        <div class="deck-header" id="hdr-${deck.DeckID}">
+          <div class="deck-header-left" onclick="toggleDeck(${deck.DeckID})">
+            <div class="deck-name">${deck.DeckName ?? 'Unnamed Deck'}</div>
+            <div class="deck-meta">
+              <span>👤 ${deck.Username ?? '—'}</span>
+              <span>📅 ${date}</span>
+              ${deck.FormatName ? `<span><span class="tag">${deck.FormatName}</span></span>` : ''}
+              <span>${deck.cards.length} card type${deck.cards.length!==1?'s':''}</span>
+            </div>
+          </div>
+          <div class="deck-header-right">
+            <button class="btn-add-card" onclick="toggleAddCardForm(event,${deck.DeckID})">+ Add Card</button>
+            <button class="btn-delete"   onclick="askDelete('deck',${deck.DeckID},'${safeName}')">Delete</button>
+            <div class="chevron" id="chv-${deck.DeckID}" onclick="toggleDeck(${deck.DeckID})"></div>
+          </div>
+        </div>
+        <div class="deck-body" id="body-${deck.DeckID}">
+          <div class="add-card-form" id="acf-${deck.DeckID}">
+            <div class="add-card-form-title">Add Card to Deck</div>
+            <div class="add-card-grid">
+              <div>
+                <label>Card Name</label>
+                <input type="text" id="acf-name-${deck.DeckID}" placeholder="e.g. Lightning Bolt"
+                  oninput="handleCardNameInput(${deck.DeckID})" autocomplete="off"/>
+              </div>
+              <div>
+                <label>Quantity</label>
+                <input type="number" id="acf-qty-${deck.DeckID}" value="1" min="1" max="99"/>
+              </div>
+              <div style="display:flex;gap:0.5rem;align-items:flex-end;grid-column:span 2">
+                <button class="btn" style="padding:0.42rem 1.1rem;font-size:0.68rem" onclick="addCardToDeck(${deck.DeckID})">Add</button>
+                <button class="btn-cancel" style="padding:0.42rem 0.9rem;font-size:0.82rem" onclick="toggleAddCardForm(event,${deck.DeckID})">Cancel</button>
+              </div>
+              <div class="new-card-fields" id="acf-new-${deck.DeckID}">
+                <div class="new-card-fields-label">✦ New card — fill in details to add it to the Cards table:</div>
+                <div><label>Card Type</label><input type="text" id="acf-type-${deck.DeckID}" placeholder="e.g. Instant"/></div>
+                <div><label>Mana Cost</label><input type="text" id="acf-mana-${deck.DeckID}" placeholder="e.g. 1R"/></div>
+                <div><label>Card Text</label><input type="text" id="acf-text-${deck.DeckID}" placeholder="e.g. Deal 3 damage"/></div>
+              </div>
+            </div>
+            <div class="add-card-form-status" id="acf-status-${deck.DeckID}"></div>
+          </div>
+          <table class="card-table">
+            <thead><tr><th>Card Name</th><th>Type</th><th>Mana Cost</th><th>Qty</th><th></th></tr></thead>
+            <tbody id="card-tbody-${deck.DeckID}">${cardRows}</tbody>
+          </table>
+        </div>
+      </div>`;
+  }
+ 
+  // ── Render card library row ──────────────────────────────────────────
+  function renderCardRow(c, idx) {
+    const id       = c.cardid            ?? c.CardID;
+    const name     = c.cardname          ?? c.CardName           ?? '—';
+    const type     = c.cardtype          ?? c.CardType           ?? '—';
+    const mana     = c.convertedmanacost ?? c.ConvertedManaCost  ?? '—';
+    const text     = c.cardtext          ?? c.CardText           ?? null;
+    const safeName = name.replace(/'/g, "\\'");
+ 
+    return `
+      <div class="card-row" id="card-${id}" style="animation-delay:${idx*0.03}s">
+        <div class="card-row-header" onclick="toggleCardRow(${id})">
+          <div class="card-row-header-left">
+            <div class="card-row-name">${name}</div>
+            <div class="card-row-meta">
+              <span>${type}</span>
+              <span class="mana-badge">${mana}</span>
+              <span style="font-size:0.72rem;color:var(--border);letter-spacing:0.06em">ID #${id}</span>
+            </div>
+          </div>
+          <div class="card-row-header-right">
+            <button class="btn-delete" onclick="event.stopPropagation();askDelete('card-library',${id},'${safeName}')">Delete</button>
+            ${text ? `<div class="chevron-sm" id="chvsm-${id}"></div>` : ''}
+          </div>
+        </div>
+        ${text ? `
+        <div class="card-row-body" id="crb-${id}">
+          <div class="card-text-label">Card Text</div>
+          <div>${text}</div>
+        </div>` : ''}
+      </div>`;
+  }
+ 
+  // ── Render format row ────────────────────────────────────────────────
+  function renderFormatRow(f, idx) {
+    const id       = f.formatid          ?? f.FormatID;
+    const name     = f.formatname        ?? f.FormatName        ?? '—';
+    const desc     = f.formatdescription ?? f.FormatDescription ?? null;
+    const deckSize = f.decksize          ?? f.DeckSize          ?? '—';
+    const maxCopy  = f.maxcopies         ?? f.MaxCopies         ?? '—';
+    const safeName = name.replace(/'/g, "\\'");
+ 
+    return `
+      <div class="format-row" id="format-${id}" style="animation-delay:${idx*0.03}s">
+        <div class="format-row-header" onclick="toggleFormatRow(${id})">
+          <div class="format-row-left">
+            <div class="format-row-name">${name}</div>
+            <div class="format-row-meta">
+              <div class="stat-pill">
+                <span class="stat-pill-label">Deck Size</span>
+                <span class="stat-pill-value">${deckSize}</span>
+              </div>
+              <div class="stat-pill">
+                <span class="stat-pill-label">Max Copies</span>
+                <span class="stat-pill-value">${maxCopy}</span>
+              </div>
+              <span style="font-size:0.72rem;color:var(--border);letter-spacing:0.06em">ID #${id}</span>
+            </div>
+          </div>
+          <div class="format-row-right">
+            <button class="btn-delete" onclick="event.stopPropagation();askDelete('format',${id},'${safeName}')">Delete</button>
+            ${desc ? `<div class="chevron-sm" id="fchv-${id}"></div>` : ''}
+          </div>
+        </div>
+        ${desc ? `
+        <div class="format-row-body" id="frb-${id}">
+          <div class="format-desc-label">Description</div>
+          <div class="format-desc-text">${desc}</div>
+        </div>` : ''}
+      </div>`;
+  }
+ 
+  // ── Render user row ──────────────────────────────────────────────────
+  function renderUser(u, idx) {
+    const id       = u.userid   ?? u.UserID;
+    const name     = u.username ?? u.Username ?? '—';
+    const email    = u.email    ?? u.Email    ?? '—';
+    const safeName = name.replace(/'/g, "\\'");
+    return `
+      <div class="user-row" id="user-${id}" style="animation-delay:${idx*0.04}s">
+        <div class="user-info">
+          <div class="user-name">${name}</div>
+          <div class="user-email">${email}</div>
+          <div class="user-id">ID #${id}</div>
+        </div>
+        <button class="btn-delete" onclick="askDelete('user',${id},'${safeName}')">Delete</button>
+      </div>`;
+  }
+ 
+  // ── Toggle functions ─────────────────────────────────────────────────
+  function toggleDeck(id) {
+    const body    = document.getElementById(`body-${id}`);
+    const chevron = document.getElementById(`chv-${id}`);
+    const header  = document.getElementById(`hdr-${id}`);
+    const isOpen  = body.classList.contains('open');
+    body.classList.toggle('open',    !isOpen);
+    chevron.classList.toggle('open', !isOpen);
+    header.classList.toggle('open',  !isOpen);
+  }
+ 
+  function toggleCardRow(id) {
+    const body    = document.getElementById(`crb-${id}`);
+    const chevron = document.getElementById(`chvsm-${id}`);
+    if (!body) return;
+    const isOpen = body.classList.contains('open');
+    body.classList.toggle('open',    !isOpen);
+    chevron?.classList.toggle('open', !isOpen);
+  }
+ 
+  function toggleFormatRow(id) {
+    const body    = document.getElementById(`frb-${id}`);
+    const chevron = document.getElementById(`fchv-${id}`);
+    if (!body) return;
+    const isOpen = body.classList.contains('open');
+    body.classList.toggle('open',    !isOpen);
+    chevron?.classList.toggle('open', !isOpen);
+  }
+ 
+  function toggleAddCardForm(e, deckId) {
+    e.stopPropagation();
+    const form    = document.getElementById(`acf-${deckId}`);
+    const body    = document.getElementById(`body-${deckId}`);
+    const header  = document.getElementById(`hdr-${deckId}`);
+    const chevron = document.getElementById(`chv-${deckId}`);
+    const isOpen  = form.classList.contains('open');
+    form.classList.toggle('open', !isOpen);
+    if (!isOpen) {
+      body.classList.add('open'); header.classList.add('open'); chevron.classList.add('open');
+      document.getElementById(`acf-name-${deckId}`).value = '';
+      document.getElementById(`acf-qty-${deckId}`).value  = 1;
+      document.getElementById(`acf-new-${deckId}`).classList.remove('show');
+    }
+  }
+ 
+  // ── Card name debounce check ─────────────────────────────────────────
+  const debounceTimers = {};
+  function handleCardNameInput(deckId) {
+    clearTimeout(debounceTimers[deckId]);
+    debounceTimers[deckId] = setTimeout(() => checkCardExists(deckId), 400);
+  }
+ 
+  async function checkCardExists(deckId) {
+    const name      = document.getElementById(`acf-name-${deckId}`).value.trim();
+    const newFields = document.getElementById(`acf-new-${deckId}`);
+    const statusEl  = document.getElementById(`acf-status-${deckId}`);
+    if (!name) { newFields.classList.remove('show'); statusEl.className = 'add-card-form-status'; return; }
+    try {
+      const res   = await fetch(`${API}/Cards`);
+      const cards = await res.json();
+      const found = cards.some(c => (c.cardname||c.CardName||'').toLowerCase() === name.toLowerCase());
+      if (found) {
+        newFields.classList.remove('show');
+        showInlineStatus(statusEl, `✓ "${name}" found in card library.`, false, 'info');
+      } else {
+        newFields.classList.add('show');
+        showInlineStatus(statusEl, `"${name}" is new — fill in card details below.`, false, 'info');
+      }
+    } catch { newFields.classList.add('show'); }
+  }
+ 
+  // ── Add card to deck ─────────────────────────────────────────────────
+  async function addCardToDeck(deckId) {
+    const CardName          = document.getElementById(`acf-name-${deckId}`).value.trim();
+    const Quantity          = parseInt(document.getElementById(`acf-qty-${deckId}`).value) || 1;
+    const CardType          = document.getElementById(`acf-type-${deckId}`)?.value.trim();
+    const ConvertedManaCost = document.getElementById(`acf-mana-${deckId}`)?.value.trim();
+    const CardText          = document.getElementById(`acf-text-${deckId}`)?.value.trim();
+    const statusEl          = document.getElementById(`acf-status-${deckId}`);
+ 
+    if (!CardName) { showInlineStatus(statusEl, 'Please enter a card name.', true); return; }
+ 
+    try {
+      const res = await fetch(`${API}/Decks/${deckId}/cards`, {
+        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ CardName, CardType, ConvertedManaCost, CardText, Quantity })
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Server error'); }
+      showInlineStatus(statusEl, `"${CardName}" added to deck!`);
+      document.getElementById(`acf-name-${deckId}`).value = '';
+      document.getElementById(`acf-qty-${deckId}`).value  = 1;
+      if (document.getElementById(`acf-type-${deckId}`)) document.getElementById(`acf-type-${deckId}`).value = '';
+      if (document.getElementById(`acf-mana-${deckId}`)) document.getElementById(`acf-mana-${deckId}`).value = '';
+      if (document.getElementById(`acf-text-${deckId}`)) document.getElementById(`acf-text-${deckId}`).value = '';
+      document.getElementById(`acf-new-${deckId}`).classList.remove('show');
+      loadDecks(); loadCards();
+    } catch (err) { showInlineStatus(statusEl, `Error: ${err.message}`, true); }
+  }
+ 
+  // ── Create deck ──────────────────────────────────────────────────────
+  async function createDeck() {
+    const DeckName = document.getElementById('deckName').value.trim();
+    const FormatID = parseInt(document.getElementById('formatSelect').value);
+    const UserID   = parseInt(document.getElementById('userSelect').value);
+    if (!DeckName || !FormatID || !UserID) { showStatus('deck', 'Please fill in all fields.', true); return; }
+    try {
+      const res = await fetch(`${API}/Decks`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ DeckName, FormatID, UserID })
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Server error'); }
+      const deck = await res.json();
+      showStatus('deck', `Deck "${deck.deckname ?? deck.DeckName}" created!`);
+      document.getElementById('deckName').value     = '';
+      document.getElementById('formatSelect').value = '';
+      document.getElementById('userSelect').value   = '';
+      loadDecks();
+    } catch (err) { showStatus('deck', `Error: ${err.message}`, true); }
+  }
+ 
+  // ── Create card ──────────────────────────────────────────────────────
+  async function createCard() {
+    const CardName          = document.getElementById('newCardName').value.trim();
+    const CardType          = document.getElementById('newCardType').value.trim();
+    const ConvertedManaCost = document.getElementById('newCardMana').value.trim();
+    const CardText          = document.getElementById('newCardText').value.trim();
+    if (!CardName) { showStatus('card', 'Please enter at least a card name.', true); return; }
+    try {
+      const res = await fetch(`${API}/Cards`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ CardName, CardType, ConvertedManaCost, CardText })
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Server error'); }
+      const card = await res.json();
+      showStatus('card', `Card "${card.cardname ?? card.CardName}" added to library!`);
+      document.getElementById('newCardName').value = '';
+      document.getElementById('newCardType').value = '';
+      document.getElementById('newCardMana').value = '';
+      document.getElementById('newCardText').value = '';
+      loadCards();
+    } catch (err) { showStatus('card', `Error: ${err.message}`, true); }
+  }
+ 
+  // ── Create format ────────────────────────────────────────────────────
+  async function createFormat() {
+    const FormatName        = document.getElementById('newFormatName').value.trim();
+    const FormatDescription = document.getElementById('newFormatDesc').value.trim();
+    const DeckSize          = parseInt(document.getElementById('newDeckSize').value);
+    const MaxCopies         = parseInt(document.getElementById('newMaxCopies').value);
+ 
+    if (!FormatName)          { showStatus('format', 'Please enter a format name.', true); return; }
+    if (!DeckSize || DeckSize  < 1) { showStatus('format', 'Deck size must be a positive number.', true); return; }
+    if (!MaxCopies || MaxCopies < 1) { showStatus('format', 'Max copies must be a positive number.', true); return; }
+ 
+    try {
+      const res = await fetch(`${API}/Formats`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ FormatName, FormatDescription, DeckSize, MaxCopies })
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Server error'); }
+      const fmt = await res.json();
+      showStatus('format', `Format "${fmt.formatname ?? fmt.FormatName}" added!`);
+      document.getElementById('newFormatName').value = '';
+      document.getElementById('newFormatDesc').value = '';
+      document.getElementById('newDeckSize').value   = '';
+      document.getElementById('newMaxCopies').value  = '';
+      loadFormats();
+      loadDropdowns(); // refresh format dropdown in Decks tab
+    } catch (err) { showStatus('format', `Error: ${err.message}`, true); }
+  }
+ 
+  // ── Create user ──────────────────────────────────────────────────────
+  async function createUser() {
+    const UserName = document.getElementById('newUsername').value.trim();
+    const Email    = document.getElementById('newEmail').value.trim();
+    if (!UserName || !Email) { showStatus('user', 'Please fill in all fields.', true); return; }
+    try {
+      const res = await fetch(`${API}/Users`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ UserName, Email })
+      });
+      if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Server error'); }
+      const user = await res.json();
+      showStatus('user', `User "${user.username ?? user.Username}" added!`);
+      document.getElementById('newUsername').value = '';
+      document.getElementById('newEmail').value    = '';
+      loadUsers(); loadDropdowns();
+    } catch (err) { showStatus('user', `Error: ${err.message}`, true); }
+  }
+ 
+  // ── Delete flow ──────────────────────────────────────────────────────
+  function askDelete(type, id, name, extra = null) {
+    pendingDelete = { type, id, name, extra };
+    document.getElementById('confirmName').textContent = name;
+    document.getElementById('confirmOverlay').classList.add('show');
+  }
+ 
+  function closeConfirm() {
+    pendingDelete = { type: null, id: null, name: null, extra: null };
+    document.getElementById('confirmOverlay').classList.remove('show');
+  }
+ 
+  async function confirmDelete() {
+    const { type, id, name, extra } = pendingDelete;
+    closeConfirm();
+    if (!id) return;
+ 
+    try {
+      let res;
+ 
+      if (type === 'card') {
+        // Remove card from a specific deck
+        res = await fetch(`${API}/Decks/${extra}/cards/${id}`, { method: 'DELETE' });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Server error'); }
+        const row = document.getElementById(`cardrow-${extra}-${id}`);
+        if (row) {
+          row.classList.add('removing');
+          row.addEventListener('animationend', () => {
+            row.remove();
+            const tbody = document.getElementById(`card-tbody-${extra}`);
+            if (tbody && !tbody.querySelector('tr:not(.removing)')) {
+              tbody.innerHTML = `<tr id="cardrow-empty-${extra}"><td colspan="5" style="color:var(--muted);font-style:italic;text-align:center;padding:0.8rem">No cards yet</td></tr>`;
+            }
+          }, { once: true });
+        }
+        showStatus('deck', `"${name}" removed from deck.`);
+ 
+      } else if (type === 'card-library') {
+        res = await fetch(`${API}/Cards/${id}`, { method: 'DELETE' });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Server error'); }
+        animateRemove(`card-${id}`, 'card-list', '.card-row', 'No cards found. Add one above!');
+        showStatus('card', `"${name}" deleted from library.`);
+        loadDecks();
+ 
+      } else if (type === 'format') {
+        res = await fetch(`${API}/Formats/${id}`, { method: 'DELETE' });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Server error'); }
+        animateRemove(`format-${id}`, 'format-list', '.format-row', 'No formats found. Add one above!');
+        showStatus('format', `"${name}" deleted.`);
+        loadDropdowns(); // refresh format dropdown
+        loadDecks();     // decks using this format may be affected
+ 
+      } else {
+        // deck or user
+        const url      = type === 'deck' ? `${API}/Decks/${id}` : `${API}/Users/${id}`;
+        const listId   = type === 'deck' ? 'deck-list' : 'user-list';
+        const rowClass = type === 'deck' ? '.deck-card' : '.user-row';
+        const emptyMsg = type === 'deck' ? 'No decks found. Create one above!' : 'No users found. Add one above!';
+ 
+        res = await fetch(url, { method: 'DELETE' });
+        if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Server error'); }
+        animateRemove(`${type}-${id}`, listId, rowClass, emptyMsg);
+        showStatus(type, `"${name}" deleted.`);
+        if (type === 'user') loadDropdowns();
+      }
+ 
+    } catch (err) {
+      const st = type === 'card' ? 'deck' : type === 'card-library' ? 'card' : type;
+      showStatus(st, `Error: ${err.message}`, true);
+    }
+  }
+ 
+  // ── Animate remove helper ────────────────────────────────────────────
+  function animateRemove(elId, listId, rowSelector, emptyMsg) {
+    const el = document.getElementById(elId);
+    if (el) {
+      el.classList.add('removing');
+      el.addEventListener('animationend', () => {
+        el.remove();
+        const list = document.getElementById(listId);
+        if (!list.querySelector(rowSelector)) {
+          list.innerHTML = `<div class="empty">${emptyMsg}</div>`;
+        }
+      }, { once: true });
+    }
+  }
+ 
+  // ── Status helpers ───────────────────────────────────────────────────
+  function showStatus(type, msg, isError = false) {
+    const el = document.getElementById(`${type}-status`);
+    if (!el) return;
+    el.textContent = msg;
+    el.className   = 'status-msg show' + (isError ? ' error' : '');
+    setTimeout(() => { el.className = 'status-msg'; }, 4500);
+  }
+ 
+  function showInlineStatus(el, msg, isError = false, type = '') {
+    el.textContent = msg;
+    el.className   = 'add-card-form-status show' + (isError ? ' error' : type ? ` ${type}` : '');
+    if (!type) setTimeout(() => { el.className = 'add-card-form-status'; }, 4000);
+  }
+ 
+  // ── Init ─────────────────────────────────────────────────────────────
+  loadDropdowns();
+  loadDecks();
+  loadCards();
+  loadFormats();
+  loadUsers();
+</script>
+</body>
+</html>
