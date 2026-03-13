@@ -27,9 +27,8 @@ CREATE TABLE Decks (
     CreationDate DATE DEFAULT CURRENT_DATE,
     FormatID INT,
     UserId INT,
-    --SET NULL for both so that the deck is still accessible even if one or both are gone.
-    FOREIGN KEY (UserId) REFERENCES Users(UserID) ON DELETE SET NULL,
-    FOREIGN KEY (FormatID) REFERENCES Formats(FormatID) ON DELETE SET NULL
+    FOREIGN KEY (UserId) REFERENCES Users(UserID) ON DELETE CASCADE,
+    FOREIGN KEY (FormatID) REFERENCES Formats(FormatID) ON DELETE CASCADE
 );
 
 --Junction Table

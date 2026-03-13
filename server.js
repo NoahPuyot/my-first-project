@@ -22,8 +22,8 @@ const pool = new Pool({
 //Async = Allows for asynchronous operations/allows multiple operations to run.
 app.get('/api/Decks', async (req, res)=>{
     try{
-        //LEFT JOIN returns all records from left table (decks) and fills null for those that havev no match in the right table (cards).
-        const result = await pool.query('SELECT Decks.*, Cards.*, Formats.*, Users.*, Decks_and_Cards.* FROM Decks LEFT JOIN Formats ON Decks.FormatID = Formats.FormatID LEFT JOIN Users ON Decks.UserID = Users.UserID LEFT JOIN Decks_and_Cards ON Decks.DeckID = Decks_and_Cards.DeckID LEFT JOIN Cards ON Decks_and_Cards.CardID = Cards.CardID')
+        //LEFT JOIN returns all records from left table (decks) and fills null for those that have no match in the right table (cards).
+        const result = await pool.query('SELECT Decks.DeckID, Decks.DeckName, Decks.CreationDate, Formats.FormatID, Formats.FormatName, Formats.DeckSize, Formats.MaxCopies, Users.UserID, Users.UserName, Cards.CardID, Cards.CardName, Cards.CardType, Cards.ConvertedManaCost, Decks_and_Cards.Quantity FROM Decks LEFT JOIN Formats ON Decks.FormatID = Formats.FormatID LEFT JOIN Users ON Decks.UserID = Users.UserID LEFT JOIN Decks_and_Cards ON Decks.DeckID = Decks_and_Cards.DeckID LEFT JOIN Cards ON Decks_and_Cards.CardID = Cards.CardID')
         res.json(result.rows);
     } catch (err){
         res.status(500).json({ error: err.message});
